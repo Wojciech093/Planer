@@ -1,0 +1,337 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#420e20">
+<title>Ordo Diei — Planer dnia</title>
+<style>
+:root {
+  --bg: #170b10;
+  --panel: #28131b;
+  --burgundy: #641b34;
+  --gold: #d9b66d;
+  --text: #f6eee7;
+  --muted: #bcaab0;
+  --border: #53303d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+header {
+  text-align: center;
+  padding: 32px 16px 24px;
+  background: linear-gradient(135deg, #260b16, #641b34);
+  border-bottom: 1px solid var(--gold);
+}
+.cross { color: var(--gold); font-size: 32px; }
+h1 {
+  margin: 8px 0 5px;
+  color: var(--gold);
+  letter-spacing: 3px;
+  font-family: Georgia, serif;
+}
+.subtitle { color: #e3cbd2; font-size: 13px; }
+main { max-width: 760px; margin: auto; padding: 20px 15px 45px; }
+h2 { color: var(--gold); font-family: Georgia, serif; font-weight: 500; }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+input, select, textarea, button {
+  font: inherit;
+  border-radius: 8px;
+  padding: 11px;
+}
+input, select, textarea {
+  background: #180c12;
+  color: var(--text);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+input[type="date"] { max-width: 100%; }
+button {
+  cursor: pointer;
+  border: 1px solid var(--gold);
+  background: var(--burgundy);
+  color: white;
+}
+button:hover { filter: brightness(1.2); }
+form { display: grid; gap: 10px; }
+form input, form select, form button { width: 100%; }
+form .fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.track {
+  height: 7px;
+  background: #12090d;
+  border-radius: 10px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+#progress {
+  height: 100%;
+  width: 0;
+  background: var(--gold);
+  transition: width .2s;
+}
+.task {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.task:last-child { border-bottom: 0; }
+.task input[type="checkbox"] {
+  accent-color: var(--gold);
+  width: 19px;
+  height: 19px;
+}
+.task-title { overflow-wrap: anywhere; }
+.task.done .task-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.task-meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
+.priority { color: var(--gold); font-size: 11px; }
+.delete {
+  padding: 6px 9px;
+  background: transparent;
+  border-color: var(--border);
+}
+.empty { color: var(--muted); text-align: center; padding: 22px 0; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button { flex: 1; }
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 15px;
+}
+@media(max-width: 430px) {
+  header { padding-top: 25px; }
+  h1 { font-size: 25px; }
+  form .fields { grid-template-columns: 1fr; }
+  .panel { padding: 14px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="cross">✠</div>
+  <h1>ORDO DIEI</h1>
+  <div class="subtitle">Porządek dnia · Modlitwa · Obowiązki</div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="date-row">
+      <div>
+        <h2>Plan dnia</h2>
+        <div id="dayLabel" class="subtitle"></div>
+      </div>
+      <input type="date" id="day">
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Nowe zadanie</h2>
+    <form id="taskForm">
+      <input id="taskName" placeholder="Co masz dziś zrobić?" required maxlength="150">
+      <div class="fields">
+        <input id="taskTime" type="time" aria-label="Godzina">
+        <select id="priority" aria-label="Priorytet">
+          <option value="normal">Zwykłe</option>
+          <option value="high">Ważne</option>
+          <option value="urgent">Pilne</option>
+        </select>
+      </div>
+      <button type="submit">＋ Dodaj zadanie</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="stats">
+      <span id="taskCount">0 zadań</span>
+      <span id="percent">0% wykonania</span>
+    </div>
+    <div class="track"><div id="progress"></div></div>
+    <div id="tasks"></div>
+    <div class="actions">
+      <button id="clearDone" type="button">Usuń wykonane</button>
+      <button id="clearAll" type="button">Wyczyść dzień</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Notatki na dziś</h2>
+    <textarea id="notes" rows="5" maxlength="5000"
+      placeholder="Zapisz myśli, plany lub ważne sprawy..."
+      style="width:100%;resize:vertical"></textarea>
+    <p class="subtitle">Notatki zapisują się automatycznie na wybrany dzień.</p>
+  </section>
+</main>
+
+<footer>✠ Ad maiorem Dei gloriam ✠</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+$('day').value = today();
+
+function read(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function tasksKey() { return 'ordo-tasks-' + $('day').value; }
+function notesKey() { return 'ordo-notes-' + $('day').value; }
+function getTasks() { return read(tasksKey(), []); }
+function saveTasks(tasks) {
+  localStorage.setItem(tasksKey(), JSON.stringify(tasks));
+  render();
+}
+
+function loadDay() {
+  const d = new Date($('day').value + 'T12:00:00');
+  $('dayLabel').textContent = d.toLocaleDateString('pl-PL', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  $('notes').value = read(notesKey(), '');
+  render();
+}
+
+function render() {
+  const tasks = getTasks().sort((a,b) =>
+    (a.time || '99:99').localeCompare(b.time || '99:99')
+  );
+  const done = tasks.filter(t => t.done).length;
+  const percent = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  $('taskCount').textContent = `${done} z ${tasks.length} wykonanych`;
+  $('percent').textContent = `${percent}% wykonania`;
+  $('progress').style.width = percent + '%';
+  $('tasks').replaceChildren();
+
+  if (!tasks.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'Twój dzień jest jeszcze pusty. Dodaj pierwsze zadanie.';
+    $('tasks').append(empty);
+    return;
+  }
+
+  const labels = {normal:'ZWYKŁE',high:'WAŻNE',urgent:'PILNE'};
+  tasks.forEach(task => {
+    const row = document.createElement('div');
+    row.className = 'task' + (task.done ? ' done' : '');
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = task.done;
+    checkbox.setAttribute('aria-label', 'Oznacz jako wykonane');
+    checkbox.addEventListener('change', () => {
+      const all = getTasks();
+      const item = all.find(t => t.id === task.id);
+      if (item) item.done = checkbox.checked;
+      saveTasks(all);
+    });
+
+    const content = document.createElement('div');
+    content.className = 'task-title';
+    const name = document.createElement('div');
+    name.textContent = task.name;
+    const meta = document.createElement('div');
+    meta.className = 'task-meta';
+    meta.textContent = (task.time ? task.time + ' · ' : '') +
+      (labels[task.priority] || 'ZWYKŁE');
+    content.append(name, meta);
+
+    const del = document.createElement('button');
+    del.className = 'delete';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Usuń zadanie');
+    del.addEventListener('click', () => {
+      saveTasks(getTasks().filter(t => t.id !== task.id));
+    });
+
+    row.append(checkbox, content, del);
+    $('tasks').append(row);
+  });
+}
+
+$('taskForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('taskName').value.trim();
+  if (!name) return;
+  const tasks = getTasks();
+  tasks.push({
+    id: Date.now().toString() + Math.random().toString(16).slice(2),
+    name,
+    time: $('taskTime').value,
+    priority: $('priority').value,
+    done: false
+  });
+  saveTasks(tasks);
+  $('taskName').value = '';
+  $('taskTime').value = '';
+  $('taskName').focus();
+});
+
+$('day').addEventListener('change', loadDay);
+
+$('notes').addEventListener('input', () => {
+  try {
+    localStorage.setItem(notesKey(), JSON.stringify($('notes').value));
+  } catch {
+    alert('Nie udało się zapisać notatek.');
+  }
+});
+
+$('clearDone').addEventListener('click', () => {
+  saveTasks(getTasks().filter(t => !t.done));
+});
+
+$('clearAll').addEventListener('click', () => {
+  if (confirm('Usunąć wszystkie zadania z wybranego dnia?')) {
+    saveTasks([]);
+  }
+});
+
+loadDay();
+</script>
+</body>
+</html>
